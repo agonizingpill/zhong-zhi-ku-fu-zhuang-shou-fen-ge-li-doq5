@@ -79,9 +79,40 @@ class Harvest(Base):
     code:Mapped[str]=mapped_column(String(60),unique=True)
     seeds:Mapped[int]=mapped_column(Integer)
     moisture:Mapped[float]=mapped_column(Float)
+    drying_started_on:Mapped[str|None]=mapped_column(String(10),nullable=True)
     state:Mapped[str]=mapped_column(String(20),default='drying')
     offspring_lot_id:Mapped[int|None]=mapped_column(ForeignKey('lots.id'),nullable=True)
     lineage:Mapped[dict|None]=mapped_column(JSON,nullable=True)
+class DryingReading(Base):
+    __tablename__='drying_readings'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    harvest_id:Mapped[int]=mapped_column(ForeignKey('harvests.id'))
+    measured_on:Mapped[str]=mapped_column(String(10))
+    moisture:Mapped[float]=mapped_column(Float)
+    note:Mapped[str]=mapped_column(String(200),default='')
+class DryingPause(Base):
+    __tablename__='drying_pauses'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    harvest_id:Mapped[int]=mapped_column(ForeignKey('harvests.id'))
+    start_on:Mapped[str]=mapped_column(String(10))
+    end_on:Mapped[str]=mapped_column(String(10))
+    note:Mapped[str]=mapped_column(String(300),default='')
+class MoistureSlot(Base):
+    __tablename__='moisture_slots'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    on_date:Mapped[str]=mapped_column(String(10),unique=True)
+class MoistureAppointment(Base):
+    __tablename__='moisture_appointments'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    code:Mapped[str]=mapped_column(String(60),unique=True)
+    harvest_id:Mapped[int]=mapped_column(ForeignKey('harvests.id'))
+    slot_id:Mapped[int|None]=mapped_column(ForeignKey('moisture_slots.id'),unique=True,nullable=True)
+    state:Mapped[str]=mapped_column(String(20),default='booked')
+    predicted_ready_on:Mapped[str|None]=mapped_column(String(10),nullable=True)
+    reading_id:Mapped[int|None]=mapped_column(ForeignKey('drying_readings.id'),nullable=True)
+class MoistureQueueLock(Base):
+    __tablename__='moisture_queue_locks'
+    id:Mapped[int]=mapped_column(primary_key=True)
 class Distribution(Base):
     __tablename__='distributions'
     id:Mapped[int]=mapped_column(primary_key=True)

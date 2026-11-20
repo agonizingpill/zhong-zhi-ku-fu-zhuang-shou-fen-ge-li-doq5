@@ -21,4 +21,6 @@ def seed():
             if not s.scalar(select(Plot).where(Plot.code==code)):s.add(Plot(code=code,row=i//6,position=i%6,capacity=250))
         s.flush();lot=s.scalar(select(Lot).where(Lot.code=='QH-021-G3'))
         if not s.scalar(select(GerminationTest).where(GerminationTest.code=='GT-SEED-80')):s.add(GerminationTest(lot_id=lot.id,code='GT-SEED-80',sampled=100,germinated=80,state='recorded'))
+        # 干燥复测队列的串行锁行，启动即建，避免并发首用撞唯一键。
+        if not s.get(MoistureQueueLock,1):s.add(MoistureQueueLock(id=1))
         s.commit();return {cls.__tablename__:s.scalar(select(func.count()).select_from(cls))for cls in (User,Accession,Lot,GerminationTest,Regeneration,Plot,Flowering,Pollination,Harvest,Distribution)}

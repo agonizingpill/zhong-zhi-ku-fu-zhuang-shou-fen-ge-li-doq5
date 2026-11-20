@@ -10,7 +10,7 @@ from .models import *
 from .schemas import *
 from .auth import current,writer,supervisor,verify,token
 from .common import pack,lock,add,audit
-from . import renewal_service as renewal,isolation_service as isolation,harvest_service as harvest,sharing_service as sharing
+from . import renewal_service as renewal,isolation_service as isolation,harvest_service as harvest,sharing_service as sharing,drying_service as drying
 from .middleware import Trace,Burst
 queue=redis.Redis.from_url(os.environ['REDIS_URL'],decode_responses=True)
 @asynccontextmanager
@@ -31,7 +31,7 @@ def login(d:Login,s=Depends(session)):
 def me(u=Depends(current)):return {'email':u.email,'role':u.role}
 @app.get('/archive')
 def archive(s=Depends(session),u=Depends(current)):
-    return {cls.__tablename__:[pack(x)for x in s.scalars(select(cls).order_by(cls.id))]for cls in (Accession,Lot,GerminationTest,Regeneration,Plot,Flowering,Pollination,Harvest,Distribution)}
+    return {cls.__tablename__:[pack(x)for x in s.scalars(select(cls).order_by(cls.id))]for cls in (Accession,Lot,GerminationTest,Regeneration,Plot,Flowering,Pollination,Harvest,DryingReading,DryingPause,MoistureSlot,MoistureAppointment,Distribution)}
 @app.get('/audits')
 def audits(s=Depends(session),u=Depends(current)):return [pack(x)for x in s.scalars(select(Audit).order_by(Audit.id.desc()).limit(50))]
 @app.post('/accessions')
@@ -94,6 +94,24 @@ def edit_harvest(id:int,d:HarvestInput,s=Depends(session),u=Depends(writer)):
 @app.post('/harvests/{id}/store')
 def store(id:int,s=Depends(session),u=Depends(supervisor)):
     x=harvest.store(s,id,u);s.commit();return x
+@app.post('/drying-readings')
+def drying_reading(d:DryingReadingInput,s=Depends(session),u=Depends(writer)):
+    x=drying.register_reading(s,d,u);s.commit();return x
+@app.post('/drying-pauses')
+def drying_pause(d:DryingPauseInput,s=Depends(session),u=Depends(writer)):
+    x=drying.pause(s,d,u);s.commit();return x
+@app.get('/moisture-queue')
+def moisture_queue(s=Depends(session),u=Depends(current)):
+    return drying.snapshot(s)
+@app.post('/moisture-queue/schedule')
+def moisture_schedule(s=Depends(session),u=Depends(writer)):
+    x=drying.schedule(s,u);s.commit();return x
+@app.post('/moisture-appointments')
+def moisture_appointment(d:AppointmentInput,s=Depends(session),u=Depends(writer)):
+    x=drying.new(s,d,u);s.commit();return x
+@app.post('/moisture-appointments/{id}/rebook')
+def moisture_rebook(id:int,d:RebookInput,s=Depends(session),u=Depends(writer)):
+    x=drying.rebook(s,id,d,u);s.commit();return x
 @app.post('/distributions')
 def distribution(d:DistributionInput,s=Depends(session),u=Depends(writer)):
     x=sharing.request(s,d,u);s.commit();return x

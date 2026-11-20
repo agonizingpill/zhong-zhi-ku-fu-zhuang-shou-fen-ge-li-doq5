@@ -53,6 +53,26 @@ class HarvestInput(BaseModel):
     code:str=Field(min_length=3,max_length=60)
     seeds:int=Field(ge=1,le=1000000)
     moisture:float=Field(ge=0,le=40,allow_inf_nan=False)
+    drying_started_on:date|None=None
+class DryingReadingInput(BaseModel):
+    harvest_id:int
+    measured_on:date
+    moisture:float=Field(ge=0,le=40,allow_inf_nan=False)
+    note:str=Field(default='',max_length=200)
+class DryingPauseInput(BaseModel):
+    harvest_id:int
+    start_on:date
+    end_on:date
+    note:str=Field(default='',max_length=300)
+    @model_validator(mode='after')
+    def valid(self):
+        if self.end_on<self.start_on:raise ValueError('停烘结束不得早于开始')
+        return self
+class AppointmentInput(BaseModel):
+    harvest_id:int
+    slot_on:date|None=None
+class RebookInput(BaseModel):
+    slot_on:date|None=None
 class DistributionInput(BaseModel):
     lot_id:int
     code:str=Field(min_length=3,max_length=60)
